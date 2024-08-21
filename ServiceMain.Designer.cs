@@ -1,6 +1,6 @@
-﻿namespace EDI_Service
+﻿namespace PDF2CSV
 {
-	partial class Service1
+	partial class ConvertPDF2CV4DSP
 	{
 		/// <summary> 
 		/// Erforderliche Designervariable.
@@ -28,8 +28,11 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
-			components = new System.ComponentModel.Container();
+			// 
+			// ConvertPDF2CV4DSP
+			// 
 			this.ServiceName = "Service1";
+
 		}
 
 		#endregion
