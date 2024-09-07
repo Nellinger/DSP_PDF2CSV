@@ -12,7 +12,7 @@ using System.Data;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 
-namespace PDF2CSV
+namespace OrderPDF2CSV
 {
 	public class CHelper
 	{

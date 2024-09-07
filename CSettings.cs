@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Data.SqlClient;
 
-namespace PDF2CSV
+namespace OrderPDF2CSV
 {
 	public class CSettings : IDisposable
 	{

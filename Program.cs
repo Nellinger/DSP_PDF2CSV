@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace PDF2CSV
+namespace OrderPDF2CSV
 {
 	static class Program
 	{

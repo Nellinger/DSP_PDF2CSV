@@ -18,12 +18,12 @@ using System.Reflection;
 using System.IO;
 using System.Windows.Forms;
 using UglyToad.PdfPig.Fonts;
-using static PDF2CSV.ConvertPDF2CV4DSP;
+using static OrderPDF2CSV.ConvertPDF2CV4DSP;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
 using Tabula.Detectors;
 
-namespace PDF2CSV
+namespace OrderPDF2CSV
 {
 	public partial class ConvertPDF2CV4DSP : ServiceBase
 	{

@@ -1,4 +1,4 @@
-﻿namespace PDF2CSV
+﻿namespace OrderPDF2CSV
 {
 	partial class ConvertPDF2CV4DSP
 	{

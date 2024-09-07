@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{AD8DAFD6-9C62-4FCB-A9B6-651537468BCF}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <RootNamespace>PDF2CSV</RootNamespace>
-    <AssemblyName>PDF2CSV</AssemblyName>
+    <RootNamespace>OrderPDF2CSV</RootNamespace>
+    <AssemblyName>OrderPDF2CSV</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
