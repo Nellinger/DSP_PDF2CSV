@@ -181,7 +181,7 @@ namespace PDF2CSV
 				Id = Int32.MinValue;
 				NewEntry = false;
 				ArtId = Int32.MinValue;
-				MandantId = Int32.MinValue;
+				MandantId = 28; // DSP
 				Status = EnumBestellStatus.None;
 				BestellOrt = EnumOrderSource.NONE;
 
@@ -296,7 +296,7 @@ namespace PDF2CSV
 				int totalFilesOK;
 				int totalFilesNOK;
 
-				if (!IsLicenseOK())
+				if (!CheckLicenseOK())
 				{
 					m_ErrHandling.HandleErr(new CHelper.CNeException(CHelper.CNeException.ErrorType.Warning, $"Could not find a valid license! " +
 									$"{Environment.NewLine}Program is being stopped!"));
@@ -341,12 +341,14 @@ namespace PDF2CSV
 
 							#endregion
 
+							int successfullyProcessedFiles = 0;
 							foreach (string filePathSource in pdfFiles)
 							{
 								m_ErrorOccurred = false;
 								m_LstLogdata.Clear();
 								List<CUDTBestellung> lstBestellungen = new List<CUDTBestellung>();
 								CUDTKunde currKunde = new CUDTKunde();
+
 
 								try
 								{
@@ -357,6 +359,8 @@ namespace PDF2CSV
 										List<Table> tables;
 										PageArea pageArea;
 										Table currTable;
+										string bestNr = "???"; // steht in erster Zeile auf 1. Seite
+										DateTime bestDatum = DateTime.MinValue;
 										m_CurrDoctype = EnumPDFDocType.NONE;
 
 										m_LstLogdata.Add($"{DateTime.Now}: Start processing file '{filePathSource}'...");
@@ -368,7 +372,7 @@ namespace PDF2CSV
 												{
 													pageArea = oe.Extract(page);
 													tables = ea.Extract(pageArea);
-
+													
 													if (m_CurrDoctype == EnumPDFDocType.NONE) // nur 1x pro Dokument festlegen
 													{
 														m_CurrDoctype = tables.Count > 1 ? EnumPDFDocType.WebEdi : EnumPDFDocType.Streckenportal;
@@ -384,6 +388,35 @@ namespace PDF2CSV
 
 												if (m_CurrDoctype == EnumPDFDocType.WebEdi)
 												{
+													if (page == 1)
+													{
+														List<string> lstWords = ExtractTextsFromPage(document.GetPage(page));
+														if (lstWords.Count >= 4)
+														{
+															if (lstWords[0].Contains("Bestellung"))
+															{
+																bestNr = lstWords[1];
+																m_LstLogdata.Add($"Found Bestellnummer '{bestNr}'");
+
+																// aktuell ist BestDatum nicht gefordert
+																/*
+																if (lstWords[2].Contains("vom"))
+																{
+																	DateTime.TryParse(lstWords[3], out bestDatum);
+																}
+																*/
+															}
+															else
+															{
+																m_LstLogdata.Add($"Could not find field 'Bestellnummer'");
+															}
+														}
+														else
+														{
+															m_LstLogdata.Add($"Could not find value for field 'Bestellnummer'");
+														}
+													}
+
 													for (int tableNo = 0; tableNo <= tables.Count; tableNo++)
 													{
 														if (tableNo <= (int)EnumTabellenPDFBestellungWebEDI.BestellteArtikel)
@@ -403,6 +436,7 @@ namespace PDF2CSV
 																		case EnumTabellenPDFBestellungWebEDI.NONE:
 																			break;
 																		case EnumTabellenPDFBestellungWebEDI.AdresseKaeufer:
+																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currKunde, nameof(CUDTKunde.ILN), rows[0][1], EnumParsingMode.Complete);
 																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currKunde, nameof(CUDTKunde.Name), rows[1][0], EnumParsingMode.Complete);
 																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currKunde, nameof(CUDTKunde.Vorname), rows[2][0], EnumParsingMode.OnlyLetters); // teilweise : enthalten wg. verrutschter Spalten
 																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currKunde, nameof(CUDTKunde.Adresse1), rows[3][0], EnumParsingMode.Complete);
@@ -411,10 +445,11 @@ namespace PDF2CSV
 																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currKunde, nameof(CUDTKunde.AdresseLandIso), rows[5][0], EnumParsingMode.Complete);
 																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currKunde, nameof(CUDTKunde.Telefon), rows[6][0], EnumParsingMode.Complete);
 																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currKunde, nameof(CUDTKunde.Fax), rows[7][0], EnumParsingMode.Complete);
-																			// UstId
+																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currKunde, nameof(CUDTKunde.UStId), rows[8][0], EnumParsingMode.Complete);
 																			break;
 																		case EnumTabellenPDFBestellungWebEDI.AdresseLieferant:
-																			// unwichtig - immer DSP
+																			// KdNr = DSP Lief-Nr inkl. Laenderkuerzel
+																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currKunde, nameof(CUDTKunde.NrEx), rows[5][1], EnumParsingMode.Complete);
 																			break;
 																		case EnumTabellenPDFBestellungWebEDI.AdresseLieferung:
 																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currKunde, nameof(CUDTKunde.VersandName), rows[1][0], EnumParsingMode.Complete);
@@ -430,16 +465,25 @@ namespace PDF2CSV
 																		case EnumTabellenPDFBestellungWebEDI.Lieferkonditionen:
 																			break;
 																		case EnumTabellenPDFBestellungWebEDI.BestellteArtikel:
+																			CUDTBestellung currBest = new CUDTBestellung();
 																			for (int i = 2; i < rows.Count; i++) // Header direkt ueberspringen
 																			{
 																				if (i % 2 == 0)
 																				{
-																					CUDTBestellung currBest = new CUDTBestellung();
-																					currBest.BestNr = "123456"; // todo
+																					currBest = new CUDTBestellung();
+																					currBest.BestNr = bestNr;
+																					//currBest.DTBestellung = bestDatum; aktuell nicht relevant
+
 																					GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currBest, nameof(CUDTBestellung.ArtNr), rows[i][1], EnumParsingMode.Complete);
 																					GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currBest, nameof(CUDTBestellung.Preis), rows[i][3], EnumParsingMode.OnlyDoubleNumbers);
 																					GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currBest, nameof(CUDTBestellung.MengeSoll), rows[i + 1][2], EnumParsingMode.OnlyIntNumbers);
 																					lstBestellungen.Add(currBest);
+																				}
+																				else // Zeile mit Rabatt
+																				{
+																					GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currBest, nameof(CUDTBestellung.Preis), rows[i][3], EnumParsingMode.OnlyDoubleNumbers);
+																					currBest.Preis -= currBest.Preis - currBest.Rabatt;
+																					currBest.Preis = currBest.Preis < 0 ? 0 : currBest.Preis;
 																				}
 																			}
 																			break;
@@ -457,6 +501,9 @@ namespace PDF2CSV
 												}
 												else // Streckenportal
 												{
+													// aktuell nicht unterstützt
+													//throw new Exception($"Document type of file '{filePathSource}' not supported!");
+
 													List<string> lstWords = ExtractTextsFromPage(document.GetPage(page));
 
 													using (PdfDocument document2 = PdfDocument.Open(filePathSource, new ParsingOptions() { ClipPaths = true }))
@@ -521,7 +568,7 @@ namespace PDF2CSV
 										}
 									}
 
-									#region Bestelldatei erzugen
+									#region Bestelldatei erzeugen
 
 
 									#endregion
@@ -538,8 +585,8 @@ namespace PDF2CSV
 									try
 									{
 										ExportData2BestellungsCSV(currKunde, lstBestellungen, path2CSVFile);
-
 										//File.Move(filePathSource, path2TargetPDFFile);
+										successfullyProcessedFiles++;
 									}
 									catch (Exception exc)
 									{
@@ -560,7 +607,8 @@ namespace PDF2CSV
 							}
 
 							m_Stopping = true; // Programm beenden
-							m_ErrHandling.HandleErr(new CHelper.CNeException(CHelper.CNeException.ErrorType.Info, "Das Programm wird beendet..."));
+							m_ErrHandling.HandleErr(new CHelper.CNeException(CHelper.CNeException.ErrorType.Info,
+								$"{successfullyProcessedFiles} von {pdfFiles.Length} Dokumenten wurden erfolgreich verarbeitet!{Environment.NewLine}Das Programm wird beendet..."));
 
 							rc = WaitHandle.WaitAny(m_EvtArray, 1000, false);
 
@@ -569,7 +617,7 @@ namespace PDF2CSV
 								switch (rc)
 								{
 									case 0: // Stop Gateway
-													//m_Dumpfile.Write2File("Gateway will be stopped");
+											//m_Dumpfile.Write2File("Gateway will be stopped");
 										break;
 
 									case 1:
@@ -651,7 +699,6 @@ namespace PDF2CSV
 						}
 						else
 						{
-							// todo error flag
 							m_ErrorOccurred = true;
 							logData += "Error: Could not extract decimal value!";
 						}
@@ -674,7 +721,6 @@ namespace PDF2CSV
 						}
 						else
 						{
-							// todo error flag
 							m_ErrorOccurred = true;
 							logData += "Error: Could not extract numeric value!";
 						}
@@ -694,7 +740,7 @@ namespace PDF2CSV
 			catch (Exception exc)
 			{
 				m_LstLogdata.Add($"Error occurred: {exc.Message}");
-				// todo ErrorOccured = true;
+				m_ErrorOccurred = true;
 				// dictionary Datei, Ergebnis, Pfade
 			}
 		}
@@ -707,13 +753,28 @@ namespace PDF2CSV
 
 			foreach (CUDTBestellung currBest in lstBestellungen)
 			{
+				#region Datenueberpruefung und -korrektur (Check)
+
+				// Standardwerte
+				currBest.VersandartStr = ""; // manuell befuellen
+				currBest.LieferscheinTyp = 4; // D
+
+				kunde.Name = kunde.Name.Contains("OBIHUB") ? kunde.Name.Replace("OBIHUB", "OBI HUB") : kunde.Name;
+				kunde.VersandName = kunde.VersandName.Contains("OBIHUB") ? kunde.VersandName.Replace("OBIHUB", "OBI HUB") : kunde.VersandName;
+				kunde.AdresseLandIso = kunde.AdresseLandIso == "A" ? "AT" : kunde.AdresseLandIso;
+				kunde.VersandAdresseLandIso = kunde.VersandAdresseLandIso == "A" ? "AT" : kunde.VersandAdresseLandIso;
+				kunde.AdresseLandIso = kunde.AdresseLandIso == "D" ? "DE" : kunde.AdresseLandIso;
+				kunde.VersandAdresseLandIso = kunde.VersandAdresseLandIso == "D" ? "DE" : kunde.VersandAdresseLandIso;
+
+				#endregion
+
 				List<string> currLine = new List<string>();
 				currLine.Add(currBest.BestNr);
-				currLine.Add(kunde.Nr.ToString());
+				currLine.Add(kunde.NrEx);
 				currLine.Add(kunde.Anrede);
 				currLine.Add(kunde.Name);
-				currLine.Add(kunde.Vorname);
-				currLine.Add(kunde.Firma);
+				currLine.Add(kunde.Name);
+				currLine.Add(kunde.Name);
 				currLine.Add(kunde.Adresse1);
 				currLine.Add(kunde.Adresse2);
 				currLine.Add(kunde.AdressePLZ);
@@ -726,8 +787,8 @@ namespace PDF2CSV
 
 				currLine.Add(kunde.VersandAnrede);
 				currLine.Add(kunde.VersandName);
-				currLine.Add(kunde.VersandVorname);
-				currLine.Add(kunde.VersandFirma);
+				currLine.Add(kunde.VersandName);
+				currLine.Add(kunde.VersandName);
 				currLine.Add(kunde.VersandAdresse1);
 				currLine.Add(kunde.VersandAdresse2);
 				currLine.Add(kunde.VersandAdressePLZ);
@@ -739,7 +800,7 @@ namespace PDF2CSV
 				currLine.Add(currBest.Preis.ToString("F2"));
 				currLine.Add(currBest.MengeSoll);
 				currLine.Add(currBest.MandantId.ToString());
-				currLine.Add(currBest.Versandart); // todo
+				currLine.Add(currBest.VersandartStr);
 				currLine.Add(currBest.LieferscheinTyp.ToString()); // todo
 				currLine.Add(kunde.UStId); // todo
 				currLine.Add(kunde.ILN); // todo
@@ -747,7 +808,7 @@ namespace PDF2CSV
 				fileLines.Add(string.Join(";", currLine));
 			}
 
-			File.WriteAllLines(path2File, fileLines);
+			File.WriteAllLines(path2File, fileLines, Encoding.UTF8);
 		}
 
 		public static void SetPropertyValue(object obj, string propertyName, object value)
@@ -871,7 +932,7 @@ namespace PDF2CSV
 		/// Wurde sie geloescht, ist die Lizenz gueltig
 		/// </summary>
 		/// <returns></returns>
-		private bool IsLicenseOK()
+		private bool CheckLicenseOK()
 		{
 			// todo auf Lizenz-Datei pruefen, dann ist Rest egal
 			//return true;
