@@ -311,10 +311,7 @@ namespace OrderPDF2CSV
 				SettingsMain settings = new SettingsMain();
 				m_Stopping = false;
 
-
-				int totalFiles;
-				int totalFilesOK;
-				int totalFilesNOK;
+				int successfullyProcessedFiles = 0;
 
 				if (!CheckLicenseOK())
 				{
@@ -361,7 +358,6 @@ namespace OrderPDF2CSV
 
 							#endregion
 
-							int successfullyProcessedFiles = 0;
 							List<string> m_FileLines = new List<string>();
 
 							m_LstLogdata.Clear();
@@ -506,16 +502,20 @@ namespace OrderPDF2CSV
 																		case EnumTabellenPDFBestellungWebEDI.NONE:
 																			break;
 																		case EnumTabellenPDFBestellungWebEDI.AdresseKaeufer:
-																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currFile.Kunde, nameof(CUDTKunde.ILN), rows[0][1], EnumParsingMode.Complete, currFile);
-																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currFile.Kunde, nameof(CUDTKunde.Name), rows[1][0], EnumParsingMode.Complete, currFile);
-																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currFile.Kunde, nameof(CUDTKunde.Vorname), rows[2][0], EnumParsingMode.OnlyLetters, currFile); // teilweise : enthalten wg. verrutschter Spalten
-																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currFile.Kunde, nameof(CUDTKunde.Adresse1), rows[3][0], EnumParsingMode.Complete, currFile);
-																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currFile.Kunde, nameof(CUDTKunde.AdressePLZ), rows[4][0], EnumParsingMode.OnlyIntNumbers, currFile);
-																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currFile.Kunde, nameof(CUDTKunde.AdresseOrt), rows[4][0], EnumParsingMode.OnlyLetters, currFile);
-																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currFile.Kunde, nameof(CUDTKunde.AdresseLandIso), rows[5][0], EnumParsingMode.Complete, currFile);
-																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currFile.Kunde, nameof(CUDTKunde.Telefon), rows[6][0], EnumParsingMode.Complete, currFile);
-																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currFile.Kunde, nameof(CUDTKunde.Fax), rows[7][0], EnumParsingMode.Complete, currFile);
-																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currFile.Kunde, nameof(CUDTKunde.UStId), rows[8][0], EnumParsingMode.Complete, currFile);
+																			int idx = 0;
+																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currFile.Kunde, nameof(CUDTKunde.ILN), rows[idx++][1], EnumParsingMode.Complete, currFile);
+																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currFile.Kunde, nameof(CUDTKunde.Name), rows[idx++][0], EnumParsingMode.Complete, currFile);
+																			if (rows.Count > 8) // Zeile Ansprechpartner ist enthalten und anscheinend optional
+																			{
+																				GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currFile.Kunde, nameof(CUDTKunde.Vorname), rows[idx++][0], EnumParsingMode.OnlyLetters, currFile); // teilweise : enthalten wg. verrutschter Spalten
+																			}
+																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currFile.Kunde, nameof(CUDTKunde.Adresse1), rows[idx++][0], EnumParsingMode.Complete, currFile);
+																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currFile.Kunde, nameof(CUDTKunde.AdressePLZ), rows[idx][0], EnumParsingMode.OnlyIntNumbers, currFile);
+																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currFile.Kunde, nameof(CUDTKunde.AdresseOrt), rows[idx++][0], EnumParsingMode.OnlyLetters, currFile);
+																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currFile.Kunde, nameof(CUDTKunde.AdresseLandIso), rows[idx++][0], EnumParsingMode.Complete, currFile);
+																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currFile.Kunde, nameof(CUDTKunde.Telefon), rows[idx++][0], EnumParsingMode.Complete, currFile);
+																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currFile.Kunde, nameof(CUDTKunde.Fax), rows[idx++][0], EnumParsingMode.Complete, currFile);
+																			GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currFile.Kunde, nameof(CUDTKunde.UStId), rows[idx++][0], EnumParsingMode.Complete, currFile);
 																			break;
 																		case EnumTabellenPDFBestellungWebEDI.AdresseLieferant:
 																			// KdNr = DSP Lief-Nr inkl. Laenderkuerzel
@@ -717,10 +717,10 @@ namespace OrderPDF2CSV
 											}
 											catch (Exception exc)
 											{
-												//m_Dumpfile.Log(ComLib.Logging.LogLevel.Error, $"Error while processing file : " + exc.Message);
-												m_ErrHandling.HandleErr(new CHelper.CNeException(CHelper.CNeException.ErrorType.Error,
-													$"Error while parsing PDFDocType {currFile.DocType} - file '{currFile.SourceFilePathPDF}': " + exc.Message));
-												currFile.ErrorOccurred = true;
+												m_Dumpfile.Error($"Error while parsing PDFDocType {currFile.DocType} - file '{currFile.SourceFilePathPDF}': " + exc.Message);
+												//m_ErrHandling.HandleErr(new CHelper.CNeException(CHelper.CNeException.ErrorType.Error,
+												//$"Error while parsing PDFDocType {currFile.DocType} - file '{currFile.SourceFilePathPDF}': " + exc.Message));
+										currFile.ErrorOccurred = true;
 											}
 
 											//m_LstLogdata.Add($"Finished processing file and found {lstBestellungen.Count} orders: ");
@@ -734,7 +734,16 @@ namespace OrderPDF2CSV
 										$"Error while evaluating file '{filePathSource}': " + exc.Message));
 								}
 
-								m_LstFiles.Add(currFile);
+								if (currFile.ErrorOccurred)
+								{
+									m_LstLogdata.Add($"Error occurred while processing file '{currFile.SourceFilePathPDF}'. Its data will not be part of the output CSV file!");
+								}
+								else
+								{
+									successfullyProcessedFiles++;
+								}
+
+								m_LstFiles.Add(currFile); // wird hinzugefuegt, auch wenn Fehler aufgetreten sind, um sie spaeter verschieben zu koennen
 							}
 
 							// Gesamt-Export
@@ -745,7 +754,7 @@ namespace OrderPDF2CSV
 								m_FileLines.Clear();
 
 								m_FileLines.Add(Header4CSVFile);
-								foreach (CUDTSingleFile file in m_LstFiles)
+								foreach (CUDTSingleFile file in m_LstFiles.Where(x => !x.ErrorOccurred).ToList())
 								{
 									m_FileLines.AddRange(CreateExportData2BestellungsCSV(file.Kunde, file.LstBestellungen));
 								}
@@ -761,7 +770,6 @@ namespace OrderPDF2CSV
 										string fileName4PDF = $"{Path.GetFileNameWithoutExtension(file.SourceFilePathPDF)}_{dtStr}_{(file.ErrorOccurred ? FlagNOK : FlagOK)}";
 
 										File.Move(file.SourceFilePathPDF, Path.Combine(targetFolderPath, fileName4PDF + ".pdf"));
-										successfullyProcessedFiles++;
 									}
 									catch (Exception exc)
 									{
@@ -777,6 +785,7 @@ namespace OrderPDF2CSV
 								m_Dumpfile = new ComLib.Logging.LogFile(fileNameLogFile, Path.Combine(targetFolderPath, fileNameLogFile), DateTime.Now, "", true, 50);
 								m_Dumpfile.Settings.AppName = this.ServiceName;
 								m_Dumpfile.Log(ComLib.Logging.LogLevel.Debug, "Info");
+								m_Dumpfile.Log(ComLib.Logging.LogLevel.Info, "################################# Log messages: ");
 								m_Dumpfile.Log(ComLib.Logging.LogLevel.Info, string.Join(Environment.NewLine, m_LstLogdata));
 								m_Dumpfile.Flush();
 								m_Dumpfile.ShutDown();
@@ -921,7 +930,7 @@ namespace OrderPDF2CSV
 			}
 			catch (Exception exc)
 			{
-				m_LstLogdata.Add($"Error occurred: {exc.Message}");
+				m_LstLogdata.Add($"Error occurred while parsing: File={currFile.SourceFilePathPDF}, TargetProperty={nameOfTargetProperty} - Value={cellValue}: {exc.Message}");
 				currFile.ErrorOccurred = true;
 				// dictionary Datei, Ergebnis, Pfade
 			}
