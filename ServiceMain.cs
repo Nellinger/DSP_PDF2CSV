@@ -384,7 +384,7 @@ namespace OrderPDF2CSV
 										currFile.DocType = EnumPDFDocType.NONE;
 										int noOfPages = 0;
 
-										for (int page = 1; page < 100000; page++)
+										for (int page = 1; page <= 1; page++)
 										{
 											try
 											{
@@ -423,6 +423,11 @@ namespace OrderPDF2CSV
 														break;
 													}
 												}
+												else
+												{
+													m_LstLogdata.Add($"This file contains more than 1 page. Processing will be ignored!");
+													currFile.ErrorOccurred = true; // 2 Seiten werden nicht verarbeitet
+												}
 											}
 											catch (Exception)
 											{
@@ -432,7 +437,7 @@ namespace OrderPDF2CSV
 
 
 										m_LstLogdata.Add($"{DateTime.Now}: Start processing file '{filePathSource}' with a total of {noOfPages} pages...");
-										for (int page = 1; page <= noOfPages; page++)
+										for (int page = 1; page <= 1; page++)
 										{
 											try
 											{
@@ -457,7 +462,7 @@ namespace OrderPDF2CSV
 														List<string> lstWords = ExtractTextsFromPage(document.GetPage(page));
 														if (lstWords.Count >= 4)
 														{
-															if (lstWords[0].Contains("Bestellung"))
+															if (lstWords[0].Contains("Bestellung") || lstWords[0].Contains("Order"))
 															{
 																bestNr = lstWords[1];
 																m_LstLogdata.Add($"Found Bestellnummer '{bestNr}'");
@@ -472,13 +477,13 @@ namespace OrderPDF2CSV
 															}
 															else
 															{
-																m_LstLogdata.Add($"Could not find field 'Bestellnummer'");
+																m_LstLogdata.Add($"Could not find field 'Bestellnummer' or 'Order'");
 																currFile.ErrorOccurred = true;
 															}
 														}
 														else
 														{
-															m_LstLogdata.Add($"Could not find value for field 'Bestellnummer'");
+															m_LstLogdata.Add($"Could not find value for field 'Bestellnummer' or 'Order'");
 															currFile.ErrorOccurred = true;
 														}
 													}
@@ -785,17 +790,20 @@ namespace OrderPDF2CSV
 								m_Dumpfile = new ComLib.Logging.LogFile(fileNameLogFile, Path.Combine(targetFolderPath, fileNameLogFile), DateTime.Now, "", true, 50);
 								m_Dumpfile.Settings.AppName = this.ServiceName;
 								m_Dumpfile.Log(ComLib.Logging.LogLevel.Debug, "Info");
-								m_Dumpfile.Log(ComLib.Logging.LogLevel.Info, "################################# Log messages: ");
-								m_Dumpfile.Log(ComLib.Logging.LogLevel.Info, string.Join(Environment.NewLine, m_LstLogdata));
-								m_Dumpfile.Flush();
-								m_Dumpfile.ShutDown();
-
 							}
 							catch (Exception exc)
 							{
 								m_ErrHandling.HandleErr(new CHelper.CNeException(CHelper.CNeException.ErrorType.Error,
 								$"Fehler beim Exportieren der CSV-Datei! Das Programm wird beendet... Details = {exc.Message}"));
 								m_Stopping = true;
+							}
+							finally
+							{
+								m_Dumpfile.Log(ComLib.Logging.LogLevel.Info, "################################# Log messages: ");
+								m_Dumpfile.Log(ComLib.Logging.LogLevel.Info, string.Join(Environment.NewLine, m_LstLogdata));
+								m_Dumpfile.Flush();
+								m_Dumpfile.ShutDown();
+								m_Dumpfile = null;
 							}
 
 							m_Stopping = true; // Programm beenden
