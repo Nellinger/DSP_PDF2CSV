@@ -36,7 +36,7 @@ namespace OrderPDF2CSV
 		{
 			None = Int32.MinValue, BestNr = 0, KundenNrEx, Anrede, Name, Vorname, Firma, Adresse1, Adresse2, PLZ, Ort, Land, LandISO, Telefon, Fax, EMail,
 			VersandAnrede, VersandName, VersandVorname, VersandFirma, VersandAdresse1, VersandAdresse2, VersandPLZ, VersandOrt,
-			VersandLand, VersandLandISO, ArtNr, Preis, Menge, MandantId, Versandart, Lieferscheintyp, UStId, ILN
+			VersandLand, VersandLandISO, ArtNr, Preis, Menge, MandantId, Versandart, Lieferscheintyp, UStId, ILN, ExtArticleNo
 		};
 		public enum EnumParsingMode { NONE = -1, Complete, OnlyIntNumbers, OnlyDoubleNumbers, OnlyLetters }
 
@@ -175,7 +175,8 @@ namespace OrderPDF2CSV
 			/// <summary>
 			/// Welcher von mehreren Lieferschein-/Rechungstypen soll bei Bestellungen buchen exportiert werden
 			/// </summary>
-			public byte LieferscheinTyp { get; set; }
+			public string LieferscheinTyp { get; set; }
+			public string ExtArtNr { get; set; }
 
 			public CUDTKunde Kunde { get; set; }
 
@@ -224,7 +225,7 @@ namespace OrderPDF2CSV
 		private ComLib.Logging.LogFile m_Dumpfile;
 		private List<string> m_LstLogdata = new List<string>();
 		private CHelper.CNeErrHandler m_ErrHandling;
-		private const string Header4CSVFile = "BestNr;KdNr;Anrede;Name;Vorname;Firma;Adresse1;Adresse2;PLZ;Ort;Land;Land_ISO;Telefon;Fax;Email;Versand_Anrede;Versand_Name;Versand_Vorname;Versand_Firma;Versand_Adresse1;Versand_Adresse2;Versand_PLZ;Versand_Ort;Versand_Land;Versand_Land_ISO;ArtNr;Preis;Menge;Mandant;Versandart;Lieferschein;Ustid;ILN";
+		private const string Header4CSVFile = "BestNr;KdNr;Anrede;Name;Vorname;Firma;Adresse1;Adresse2;PLZ;Ort;Land;Land_ISO;Telefon;Fax;Email;Versand_Anrede;Versand_Name;Versand_Vorname;Versand_Firma;Versand_Adresse1;Versand_Adresse2;Versand_PLZ;Versand_Ort;Versand_Land;Versand_Land_ISO;ArtNr;Preis;Menge;Mandant;Versandart;Lieferschein;Ustid;ILN;ExterneArtNr";
 		public List<CUDTSingleFile> m_LstFiles = new List<CUDTSingleFile>();
 
 		private enum EnumTabellenPDFBestellungWebEDI
@@ -565,6 +566,7 @@ namespace OrderPDF2CSV
 
 																					GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currBest, nameof(CUDTBestellung.ArtNr), rows[i][1], EnumParsingMode.Complete, currFile);
 																					GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currBest, nameof(CUDTBestellung.Preis), rows[i][3], EnumParsingMode.OnlyDoubleNumbers, currFile);
+																					GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currBest, nameof(CUDTBestellung.ExtArtNr), rows[i + 1][1], EnumParsingMode.Complete, currFile);
 																					GetWert4Cell((EnumTabellenPDFBestellungWebEDI)tableNo, currBest, nameof(CUDTBestellung.MengeSoll), rows[i + 1][2], EnumParsingMode.OnlyIntNumbers, currFile);
 																					currFile.LstBestellungen.Add(currBest);
 																				}
@@ -954,7 +956,7 @@ namespace OrderPDF2CSV
 
 				// Standardwerte
 				currBest.VersandartStr = ""; // manuell befuellen
-				currBest.LieferscheinTyp = 4; // D
+				currBest.LieferscheinTyp = "D"; // 4
 
 				kunde.Name = kunde.Name.Contains("OBIHUB") ? kunde.Name.Replace("OBIHUB", "OBI HUB") : kunde.Name;
 				kunde.VersandName = kunde.VersandName.Contains("OBIHUB") ? kunde.VersandName.Replace("OBIHUB", "OBI HUB") : kunde.VersandName;
@@ -1030,9 +1032,10 @@ namespace OrderPDF2CSV
 				currLine.Add(currBest.MengeSoll);
 				currLine.Add(currBest.MandantId.ToString());
 				currLine.Add(currBest.VersandartStr);
-				currLine.Add(currBest.LieferscheinTyp.ToString()); // todo
-				currLine.Add(kunde.UStId); // todo
-				currLine.Add(kunde.ILN); // todo
+				currLine.Add(currBest.LieferscheinTyp);
+				currLine.Add(kunde.UStId);
+				currLine.Add(kunde.ILN);
+				currLine.Add(currBest.ExtArtNr);
 
 				fileLines.Add(string.Join(";", currLine));
 			}
