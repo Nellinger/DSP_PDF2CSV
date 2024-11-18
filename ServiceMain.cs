@@ -1179,7 +1179,7 @@ namespace OrderPDF2CSV
 				}
 				else
 				{
-					if ((DateTime.Now - CHelper.GetBuildDT()).TotalDays > 30)
+					if ((DateTime.Now - CHelper.GetBuildDT()).TotalDays > 45)
 					{
 						rc = false;
 					}
