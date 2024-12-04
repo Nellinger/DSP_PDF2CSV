@@ -25,6 +25,7 @@ using Tabula.Detectors;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Policy;
 using System.Runtime.Remoting.Contexts;
+using System.Text.RegularExpressions;
 
 namespace OrderPDF2CSV
 {
@@ -958,14 +959,43 @@ namespace OrderPDF2CSV
 				currBest.VersandartStr = ""; // manuell befuellen
 				currBest.LieferscheinTyp = "D"; // 4
 
-				kunde.Name = kunde.Name.Contains("OBIHUB") ? kunde.Name.Replace("OBIHUB", "OBI HUB") : kunde.Name;
-				kunde.VersandName = kunde.VersandName.Contains("OBIHUB") ? kunde.VersandName.Replace("OBIHUB", "OBI HUB") : kunde.VersandName;
 				kunde.AdresseLandIso = kunde.AdresseLandIso == "A" ? "AT" : kunde.AdresseLandIso;
 				kunde.VersandAdresseLandIso = kunde.VersandAdresseLandIso == "A" ? "AT" : kunde.VersandAdresseLandIso;
 				kunde.AdresseLandIso = kunde.AdresseLandIso == "D" ? "DE" : kunde.AdresseLandIso;
 				kunde.VersandAdresseLandIso = kunde.VersandAdresseLandIso == "D" ? "DE" : kunde.VersandAdresseLandIso;
 				kunde.AdresseLandIso = kunde.AdresseLandIso == "SL" ? "SVK" : kunde.AdresseLandIso;
 				kunde.VersandAdresseLandIso = kunde.VersandAdresseLandIso == "SL" ? "SVK" : kunde.VersandAdresseLandIso;
+
+				#region Weil Zeilenumbruch nicht korrekt erkannt wird, werden Woerter teilweise nicht getrennt - nun Leerzeichen, falls vor/nach den Begriffen 
+				// ein Buchstabe vorkommt
+				kunde.VersandAdresse1 = Regex.Replace(kunde.VersandAdresse1, @"(?<=\p{L})GMBH", " GmbH", RegexOptions.IgnoreCase);
+				kunde.VersandAdresse1 = Regex.Replace(kunde.VersandAdresse1, @"GMBH(?=\p{L})", "GmbH ", RegexOptions.IgnoreCase);
+				kunde.VersandAdresse1 = Regex.Replace(kunde.VersandAdresse1, @"(?<=\p{L})BAUHAUS", " Bauhaus", RegexOptions.IgnoreCase);
+				kunde.VersandAdresse1 = Regex.Replace(kunde.VersandAdresse1, @"BAUHAUS(?=\p{L})", "Bauhaus ", RegexOptions.IgnoreCase);
+				kunde.VersandAdresse1 = Regex.Replace(kunde.VersandAdresse1, @"(?<=\p{L})OBI", " OBI", RegexOptions.IgnoreCase);
+				kunde.VersandAdresse1 = Regex.Replace(kunde.VersandAdresse1, @"OBI(?=\p{L})", "OBI ", RegexOptions.IgnoreCase);
+
+				kunde.Adresse1 = Regex.Replace(kunde.Adresse1, @"(?<=\p{L})GMBH", " GmbH", RegexOptions.IgnoreCase);
+				kunde.Adresse1 = Regex.Replace(kunde.Adresse1, @"GMBH(?=\p{L})", "GmbH ", RegexOptions.IgnoreCase);
+				kunde.Adresse1 = Regex.Replace(kunde.Adresse1, @"(?<=\p{L})BAUHAUS", " Bauhaus", RegexOptions.IgnoreCase);
+				kunde.Adresse1 = Regex.Replace(kunde.Adresse1, @"BAUHAUS(?=\p{L})", "Bauhaus ", RegexOptions.IgnoreCase);
+				kunde.Adresse1 = Regex.Replace(kunde.Adresse1, @"(?<=\p{L})OBI", " OBI", RegexOptions.IgnoreCase);
+				kunde.Adresse1 = Regex.Replace(kunde.Adresse1, @"OBI(?=\p{L})", "OBI ", RegexOptions.IgnoreCase);
+
+				kunde.Name = Regex.Replace(kunde.Name, @"(?<=\p{L})GMBH", " GmbH", RegexOptions.IgnoreCase);
+				kunde.Name = Regex.Replace(kunde.Name, @"GMBH(?=\p{L})", "GmbH ", RegexOptions.IgnoreCase);
+				kunde.Name = Regex.Replace(kunde.Name, @"(?<=\p{L})BAUHAUS", " Bauhaus", RegexOptions.IgnoreCase);
+				kunde.Name = Regex.Replace(kunde.Name, @"BAUHAUS(?=\p{L})", "Bauhaus ", RegexOptions.IgnoreCase);
+				kunde.Name = Regex.Replace(kunde.Name, @"(?<=\p{L})OBI", " OBI", RegexOptions.IgnoreCase);
+				kunde.Name = Regex.Replace(kunde.Name, @"OBI(?=\p{L})", "OBI ", RegexOptions.IgnoreCase);
+
+				kunde.VersandName = Regex.Replace(kunde.VersandName, @"(?<=\p{L})GMBH", " GmbH", RegexOptions.IgnoreCase);
+				kunde.VersandName = Regex.Replace(kunde.VersandName, @"GMBH(?=\p{L})", "GmbH ", RegexOptions.IgnoreCase);
+				kunde.VersandName = Regex.Replace(kunde.VersandName, @"(?<=\p{L})BAUHAUS", " Bauhaus", RegexOptions.IgnoreCase);
+				kunde.VersandName = Regex.Replace(kunde.VersandName, @"BAUHAUS(?=\p{L})", "Bauhaus ", RegexOptions.IgnoreCase);
+				kunde.VersandName = Regex.Replace(kunde.VersandName, @"(?<=\p{L})OBI", " OBI", RegexOptions.IgnoreCase);
+				kunde.VersandName = Regex.Replace(kunde.VersandName, @"OBI(?=\p{L})", "OBI ", RegexOptions.IgnoreCase);
+				#endregion
 
 				switch (kunde.AdresseLandIso)
 				{
@@ -1006,6 +1036,7 @@ namespace OrderPDF2CSV
 				currLine.Add(kunde.Name);
 				currLine.Add(kunde.Name);
 				currLine.Add(kunde.Name);
+
 				currLine.Add(kunde.Adresse1);
 				currLine.Add(kunde.Adresse2);
 				currLine.Add(kunde.AdressePLZ);
@@ -1020,6 +1051,7 @@ namespace OrderPDF2CSV
 				currLine.Add(kunde.VersandName);
 				currLine.Add(kunde.VersandName);
 				currLine.Add(kunde.VersandName);
+
 				currLine.Add(kunde.VersandAdresse1);
 				currLine.Add(kunde.VersandAdresse2);
 				currLine.Add(kunde.VersandAdressePLZ);
